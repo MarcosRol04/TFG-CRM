@@ -1,29 +1,43 @@
-import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 
-function App() {
-  const [estadoServidor, setEstadoServidor] = useState('Comprobando...');
+// Ruta protegida
+const RutaProtegida = ({ children }) => {
+  const { usuario } = useAuth();
+  return usuario ? children : <Navigate to="/login" />;
+};
 
-  useEffect(() => {
-    fetch('http://localhost:5000/api/health')
-      .then(res => res.json())
-      .then(data => setEstadoServidor(data.mensaje))
-      .catch(() => setEstadoServidor('❌ No conecta con el servidor'));
-  }, []);
+function AppRoutes() {
+  const { usuario } = useAuth();
 
   return (
-    <div style={{ padding: '40px', fontFamily: 'Arial' }}>
-      <h1>🎯 TFG - CRM</h1>
-      <p>Estado del servidor: <strong>{estadoServidor}</strong></p>
-      <hr />
-      <h2>Módulos a desarrollar:</h2>
-      <ul>
-        <li>✅ Servidor funcionando</li>
-        <li>🔲 Gestión de Usuarios</li>
-        <li>🔲 Grupos y Proyectos</li>
-        <li>🔲 Correo integrado</li>
-        <li>🔲 Planificación (Kanban)</li>
-      </ul>
-    </div>
+    <Routes>
+      <Route 
+        path="/login" 
+        element={usuario ? <Navigate to="/dashboard" /> : <Login />} 
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <RutaProtegida>
+            <Dashboard />
+          </RutaProtegida>
+        }
+      />
+      <Route path="*" element={<Navigate to="/login" />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
