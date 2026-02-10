@@ -1,0 +1,13 @@
+{
+  "name": "tfg-crm",
+  "version": "1.0.0",
+  "description": "TFG - Sistema CRM",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm start --prefix frontend\"",
+    "backend": "npm run dev --prefix backend",
+    "frontend": "npm start --prefix frontend"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
