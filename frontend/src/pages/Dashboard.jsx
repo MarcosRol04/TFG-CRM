@@ -16,7 +16,7 @@ export default function Dashboard() {
         variant="outlined"
         color="error"
         onClick={logout}
-        sx={{ mt: 3 }}
+        sx={{ mt: 3 }}  
       >
         Cerrar Sesión
       </Button>
