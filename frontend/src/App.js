@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Users from './pages/Users';
+import UserForm from './components/users/UserForm';
 
 // Ruta protegida
 const RutaProtegida = ({ children }) => {
@@ -23,6 +25,30 @@ function AppRoutes() {
         element={
           <RutaProtegida>
             <Dashboard />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <RutaProtegida>
+            <Users />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path="/users/new"
+        element={
+          <RutaProtegida>
+            <UserForm />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path="/users/edit/:id"
+        element={
+          <RutaProtegida>
+            <UserForm />
           </RutaProtegida>
         }
       />

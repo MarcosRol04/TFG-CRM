@@ -11,7 +11,7 @@ exports.getAll = async (req, res) => {
 
     if (error) throw error;
 
-    res.json({ usuarios: data });
+    res.json(data);  // ← CORREGIDO
 
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -33,7 +33,7 @@ exports.getOne = async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    res.json({ usuario: data });
+    res.json(data);  // ← CORREGIDO
 
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -66,7 +66,7 @@ exports.create = async (req, res) => {
         email,
         password: hashedPassword,
         phone: phone || null,
-        role: role || 'colaborador'
+        role: role || 'user'  // ← CAMBIÉ 'colaborador' por 'user'
       }])
       .select('id, name, email, role, phone, created_at')
       .single();
@@ -87,11 +87,35 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, phone, role } = req.body;
+    const { name, email, password, phone, role } = req.body;
+
+    // Preparar datos a actualizar
+    const updateData = { name, phone, role };
+
+    // Si se proporciona nueva contraseña, hashearla
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updateData.password = hashedPassword;
+    }
+
+    // Si se proporciona email, verificar que no esté duplicado
+    if (email) {
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .neq('id', id)
+        .single();
+
+      if (existing) {
+        return res.status(400).json({ error: 'Este email ya está registrado' });
+      }
+      updateData.email = email;
+    }
 
     const { data, error } = await supabase
       .from('users')
-      .update({ name, phone, role })
+      .update(updateData)
       .eq('id', id)
       .select('id, name, email, role, phone, created_at')
       .single();
