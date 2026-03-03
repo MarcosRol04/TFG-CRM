@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Layout from '../components/Layout';
 import {
   Box,
   Paper,
@@ -138,13 +139,16 @@ const Users = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
+  <Layout>
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <CircularProgress />
+    </Box>
+  </Layout>
+);
   }
 
   return (
+  <Layout>
     <Box sx={{ p: 3 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
@@ -237,7 +241,7 @@ const Users = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={deleteDialog.open} onClose={closeDeleteDialog}>
+    <Dialog open={deleteDialog.open} onClose={closeDeleteDialog}>
         <DialogTitle>Confirmar eliminación</DialogTitle>
         <DialogContent>
           <Typography>
@@ -252,7 +256,9 @@ const Users = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
     </Box>
+  </Layout>
   );
 };
 

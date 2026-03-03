@@ -4,6 +4,9 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import UserForm from './components/users/UserForm';
+import Groups from './pages/Groups';
+import GroupDetail from './pages/GroupDetail';
+
 
 // Ruta protegida
 const RutaProtegida = ({ children }) => {
@@ -53,6 +56,15 @@ function AppRoutes() {
         }
       />
       <Route path="*" element={<Navigate to="/login" />} />
+      <Route path="/groups" element={<Groups />} />
+      <Route
+  path="/groups/:id"
+  element={
+    <RutaProtegida>
+      <GroupDetail />
+    </RutaProtegida>
+  }
+/>
     </Routes>
   );
 }

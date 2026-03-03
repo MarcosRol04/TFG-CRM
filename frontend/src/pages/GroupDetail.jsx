@@ -1,0 +1,332 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Box, Typography, Paper, Avatar, Chip, Button, Divider,
+  TextField, IconButton, List, ListItem, ListItemAvatar,
+  ListItemText, CircularProgress, Tooltip, Link
+} from '@mui/material';
+import {
+  ExitToApp, Add, Delete, Send, Link as LinkIcon,
+  GitHub, Language, OpenInNew, Group as GroupIcon
+} from '@mui/icons-material';
+import axios from 'axios';
+import Layout from '../components/Layout';
+import { useAuth } from '../context/AuthContext';
+
+const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+// Colores para avatares
+const COLORS = ['#1976d2','#388e3c','#f57c00','#7b1fa2','#c62828','#00796b'];
+const getColor = (name) => COLORS[name?.charCodeAt(0) % COLORS.length];
+
+export default function GroupDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { usuario } = useAuth();
+
+  const [group, setGroup] = useState(null);
+  const [links, setLinks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [linkName, setLinkName] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [chatMessages, setChatMessages] = useState([
+    { id: 1, author: 'Sistema', text: 'Bienvenido al chat del grupo 👋', time: '09:00', isSystem: true }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const chatEndRef = useRef(null);
+
+  const token = localStorage.getItem('token');
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const fetchGroup = async () => {
+    try {
+      const [groupRes, linksRes] = await Promise.all([
+        axios.get(`${API}/groups/${id}`, { headers }),
+        axios.get(`${API}/groups/${id}/links`, { headers })
+      ]);
+      setGroup(groupRes.data);
+      setLinks(linksRes.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchGroup(); }, [id]);
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
+
+  const handleLeave = async () => {
+    if (!window.confirm('¿Salir del grupo? Podrás ser añadido de nuevo más tarde.')) return;
+    try {
+      await axios.post(`${API}/groups/${id}/leave`, { userId: usuario.id }, { headers });
+      navigate('/groups');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddLink = async () => {
+    if (!linkName.trim() || !linkUrl.trim()) return;
+    try {
+      const res = await axios.post(`${API}/groups/${id}/links`, { name: linkName, url: linkUrl }, { headers });
+      setLinks(prev => [...prev, res.data]);
+      setLinkName('');
+      setLinkUrl('');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRemoveLink = async (linkId) => {
+    try {
+      await axios.delete(`${API}/groups/${id}/links/${linkId}`, { headers });
+      setLinks(prev => prev.filter(l => l.id !== linkId));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSendMessage = () => {
+    if (!chatInput.trim()) return;
+    const newMsg = {
+      id: Date.now(),
+      author: usuario?.name || 'Tú',
+      text: chatInput,
+      time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+      isOwn: true
+    };
+    setChatMessages(prev => [...prev, newMsg]);
+    setChatInput('');
+  };
+
+  const getLinkIcon = (url) => {
+    if (url.includes('github')) return <GitHub fontSize="small" />;
+    return <Language fontSize="small" />;
+  };
+
+  if (loading) return (
+    <Layout>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    </Layout>
+  );
+
+  if (!group) return (
+    <Layout>
+      <Typography>Grupo no encontrado</Typography>
+    </Layout>
+  );
+
+  return (
+    <Layout>
+      <Box sx={{ display: 'flex', gap: 3, height: 'calc(100vh - 48px)' }}>
+
+        {/* ── COLUMNA IZQUIERDA ── */}
+        <Box sx={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 3 }}>
+
+          {/* Cabecera del grupo */}
+          <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+              <Box display="flex" alignItems="center" gap={2}>
+                <Avatar sx={{ bgcolor: 'primary.main', width: 52, height: 52 }}>
+                  <GroupIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h5" fontWeight={700}>{group.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {group.description || 'Sin descripción'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Creado el {new Date(group.created_at).toLocaleDateString('es-ES')}
+                  </Typography>
+                </Box>
+              </Box>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<ExitToApp />}
+                onClick={handleLeave}
+                size="small"
+              >
+                Salir del grupo
+              </Button>
+            </Box>
+          </Paper>
+
+          {/* Miembros */}
+          <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
+            <Typography variant="h6" fontWeight={600} mb={2}>
+              Miembros ({group.members?.length || 0})
+            </Typography>
+            <Box display="flex" flexWrap="wrap" gap={1.5}>
+              {group.members?.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">Sin miembros</Typography>
+              ) : group.members.map(m => (
+                <Tooltip key={m.id} title={m.email}>
+                  <Chip
+                    avatar={
+                      <Avatar sx={{ bgcolor: getColor(m.name) }}>
+                        {m.name?.[0]?.toUpperCase()}
+                      </Avatar>
+                    }
+                    label={m.name}
+                    variant="outlined"
+                  />
+                </Tooltip>
+              ))}
+            </Box>
+          </Paper>
+
+          {/* Links */}
+          <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
+            <Typography variant="h6" fontWeight={600} mb={2}>
+              <LinkIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+              Links del grupo
+            </Typography>
+
+            {/* Añadir link */}
+            <Box display="flex" gap={1} mb={2} flexWrap="wrap">
+              <TextField
+                size="small"
+                placeholder="Nombre (ej: Repositorio)"
+                value={linkName}
+                onChange={e => setLinkName(e.target.value)}
+                sx={{ flex: 1, minWidth: 140 }}
+              />
+              <TextField
+                size="small"
+                placeholder="URL (ej: https://github.com/...)"
+                value={linkUrl}
+                onChange={e => setLinkUrl(e.target.value)}
+                sx={{ flex: 2, minWidth: 200 }}
+              />
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleAddLink}
+                disabled={!linkName.trim() || !linkUrl.trim()}
+              >
+                Añadir
+              </Button>
+            </Box>
+
+            {/* Lista de links */}
+            {links.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">No hay links añadidos</Typography>
+            ) : (
+              <List dense disablePadding>
+                {links.map(link => (
+                  <ListItem
+                    key={link.id}
+                    disablePadding
+                    sx={{
+                      mb: 1, px: 1.5, py: 1,
+                      bgcolor: 'grey.50', borderRadius: 2,
+                      border: '1px solid', borderColor: 'grey.200'
+                    }}
+                    secondaryAction={
+                      <IconButton size="small" color="error" onClick={() => handleRemoveLink(link.id)}>
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    }
+                  >
+                    <ListItemAvatar sx={{ minWidth: 36 }}>
+                      {getLinkIcon(link.url)}
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Link href={link.url} target="_blank" rel="noopener" underline="hover"
+                          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          {link.name}
+                          <OpenInNew sx={{ fontSize: 12 }} />
+                        </Link>
+                      }
+                      secondary={link.url}
+                      secondaryTypographyProps={{ noWrap: true, fontSize: 11 }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </Paper>
+        </Box>
+
+        {/* ── COLUMNA DERECHA — CHAT ── */}
+        <Paper elevation={2} sx={{
+          width: 340, borderRadius: 3, display: 'flex',
+          flexDirection: 'column', overflow: 'hidden', flexShrink: 0
+        }}>
+          {/* Header chat */}
+          <Box sx={{ px: 2, py: 1.5, bgcolor: 'primary.main' }}>
+            <Typography variant="subtitle1" fontWeight={600} color="white">
+              💬 Chat del grupo
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.75)' }}>
+              {group.members?.length || 0} miembros
+            </Typography>
+          </Box>
+
+          <Divider />
+
+          {/* Mensajes */}
+          <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {chatMessages.map(msg => (
+              <Box key={msg.id} sx={{
+                alignSelf: msg.isSystem ? 'center' : msg.isOwn ? 'flex-end' : 'flex-start',
+                maxWidth: '80%'
+              }}>
+                {msg.isSystem ? (
+                  <Typography variant="caption" color="text.secondary"
+                    sx={{ bgcolor: 'grey.100', px: 1.5, py: 0.5, borderRadius: 2, display: 'block' }}>
+                    {msg.text}
+                  </Typography>
+                ) : (
+                  <Box>
+                    {!msg.isOwn && (
+                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                        {msg.author}
+                      </Typography>
+                    )}
+                    <Box sx={{
+                      bgcolor: msg.isOwn ? 'primary.main' : 'grey.100',
+                      color: msg.isOwn ? 'white' : 'text.primary',
+                      px: 1.5, py: 1, borderRadius: 2,
+                      borderBottomRightRadius: msg.isOwn ? 0 : 2,
+                      borderBottomLeftRadius: msg.isOwn ? 2 : 0,
+                    }}>
+                      <Typography variant="body2">{msg.text}</Typography>
+                      <Typography variant="caption" sx={{ opacity: 0.7, fontSize: 10 }}>
+                        {msg.time}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+            ))}
+            <div ref={chatEndRef} />
+          </Box>
+
+          <Divider />
+
+          {/* Input chat */}
+          <Box sx={{ p: 1.5, display: 'flex', gap: 1 }}>
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="Escribe un mensaje..."
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+            />
+            <IconButton color="primary" onClick={handleSendMessage} disabled={!chatInput.trim()}>
+              <Send />
+            </IconButton>
+          </Box>
+        </Paper>
+
+      </Box>
+    </Layout>
+  );
+}
