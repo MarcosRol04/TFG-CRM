@@ -6,6 +6,10 @@ import Users from './pages/Users';
 import UserForm from './components/users/UserForm';
 import Groups from './pages/Groups';
 import GroupDetail from './pages/GroupDetail';
+import Projects from './pages/Projects';
+import ProjectDetail from './pages/ProjectDetail';
+
+
 
 
 // Ruta protegida
@@ -62,6 +66,22 @@ function AppRoutes() {
   element={
     <RutaProtegida>
       <GroupDetail />
+    </RutaProtegida>
+  }
+/>
+<Route
+  path="/projects"
+  element={
+    <RutaProtegida>
+      <Projects />
+    </RutaProtegida>
+  }
+/>
+<Route
+  path="/projects/:id"
+  element={
+    <RutaProtegida>
+      <ProjectDetail />
     </RutaProtegida>
   }
 />

@@ -5,6 +5,8 @@ const supabase = require('./config/supabase');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const groupRoutes = require('./routes/groupRoutes');
+const projectRoutes = require('./routes/projectRoutes');
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -17,6 +19,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/groups', groupRoutes);
+app.use('/api/projects', projectRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

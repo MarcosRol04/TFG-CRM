@@ -1,8 +1,9 @@
 import { Box, Typography, Paper, Grid } from '@mui/material';
-import { People, Group } from '@mui/icons-material';
+import { People, Group, FolderOpen } from '@mui/icons-material';  
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
+
 
 const StatCard = ({ icon, label, color, path, onClick }) => (
   <Paper
@@ -52,6 +53,14 @@ export default function Dashboard() {
             onClick={() => navigate('/groups')}
           />
         </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+  <StatCard
+    icon={<FolderOpen />}
+    label="Proyectos"
+    color="warning"
+    onClick={() => navigate('/projects')}
+  />
+</Grid>
       </Grid>
     </Layout>
   );

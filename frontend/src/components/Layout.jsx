@@ -10,6 +10,8 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import { FolderOpen } from '@mui/icons-material';
+
 
 const SIDEBAR_WIDTH = 240;
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -31,6 +33,7 @@ export default function Layout({ children }) {
   const navItems = [
     { label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { label: 'Usuarios',  icon: <People />,        path: '/users' },
+    { label: 'Proyectos',  icon: <FolderOpen />,    path: '/projects'  },
   ];
 
   return (
