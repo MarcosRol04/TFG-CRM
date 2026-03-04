@@ -11,7 +11,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { FolderOpen } from '@mui/icons-material';
-
+import BuildIcon from '@mui/icons-material/Build';
 
 const SIDEBAR_WIDTH = 240;
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
@@ -28,13 +28,26 @@ export default function Layout({ children }) {
     axios.get(`${API}/groups`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => setGroups(res.data))
       .catch(console.error);
-  }, [location.pathname]); // recarga al cambiar de página
+  }, [location.pathname]);
 
   const navItems = [
-    { label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { label: 'Usuarios',  icon: <People />,        path: '/users' },
-    { label: 'Proyectos',  icon: <FolderOpen />,    path: '/projects'  },
+    { label: 'Dashboard',    icon: <DashboardIcon />, path: '/dashboard' },
+    { label: 'Usuarios',     icon: <People />,        path: '/users'     },
+    { label: 'Proyectos',    icon: <FolderOpen />,    path: '/projects'  },
   ];
+
+  const isActive = (path) => location.pathname === path;
+
+  const navBtnSx = (path) => ({
+    borderRadius: 2,
+    bgcolor: isActive(path) ? 'primary.main' : 'transparent',
+    color: isActive(path) ? 'white' : 'text.primary',
+    '&:hover': { bgcolor: isActive(path) ? 'primary.dark' : 'action.hover' },
+    '& .MuiListItemIcon-root': {
+      color: isActive(path) ? 'white' : 'text.secondary',
+      minWidth: 40,
+    },
+  });
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
@@ -64,50 +77,35 @@ export default function Layout({ children }) {
 
         <List sx={{ px: 1, mt: 1, flexGrow: 1, overflowY: 'auto' }}>
 
-          {/* Dashboard y Usuarios */}
-          {navItems.map(({ label, icon, path }) => {
-            const active = location.pathname === path;
-            return (
-              <ListItem key={path} disablePadding sx={{ mb: 0.5 }}>
-                <ListItemButton
-                  onClick={() => navigate(path)}
-                  sx={{
-                    borderRadius: 2,
-                    bgcolor: active ? 'primary.main' : 'transparent',
-                    color: active ? 'white' : 'text.primary',
-                    '&:hover': { bgcolor: active ? 'primary.dark' : 'action.hover' },
-                    '& .MuiListItemIcon-root': { color: active ? 'white' : 'text.secondary', minWidth: 40 },
-                  }}
-                >
-                  <ListItemIcon>{icon}</ListItemIcon>
-                  <ListItemText primary={label} primaryTypographyProps={{ fontWeight: active ? 600 : 400 }} />
-                </ListItemButton>
-              </ListItem>
-            );
-          })}
+          {/* Dashboard, Usuarios, Proyectos */}
+          {navItems.map(({ label, icon, path }) => (
+            <ListItem key={path} disablePadding sx={{ mb: 0.5 }}>
+              <ListItemButton onClick={() => navigate(path)} sx={navBtnSx(path)}>
+                <ListItemIcon>{icon}</ListItemIcon>
+                <ListItemText
+                  primary={label}
+                  primaryTypographyProps={{ fontWeight: isActive(path) ? 600 : 400 }}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
 
           {/* Grupos — desplegable */}
           <ListItem disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
               onClick={() => { navigate('/groups'); setGroupsOpen(!groupsOpen); }}
-              sx={{
-                borderRadius: 2,
-                bgcolor: location.pathname === '/groups' ? 'primary.main' : 'transparent',
-                color: location.pathname === '/groups' ? 'white' : 'text.primary',
-                '&:hover': { bgcolor: location.pathname === '/groups' ? 'primary.dark' : 'action.hover' },
-                '& .MuiListItemIcon-root': {
-                  color: location.pathname === '/groups' ? 'white' : 'text.secondary',
-                  minWidth: 40
-                },
-              }}
+              sx={navBtnSx('/groups')}
             >
               <ListItemIcon><Group /></ListItemIcon>
-              <ListItemText primary="Grupos" primaryTypographyProps={{ fontWeight: location.pathname === '/groups' ? 600 : 400 }} />
+              <ListItemText
+                primary="Grupos"
+                primaryTypographyProps={{ fontWeight: isActive('/groups') ? 600 : 400 }}
+              />
               {groupsOpen ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
             </ListItemButton>
           </ListItem>
 
-          {/* Lista de grupos en el sidebar */}
+          {/* Lista de grupos */}
           <Collapse in={groupsOpen} timeout="auto" unmountOnExit>
             <List disablePadding sx={{ pl: 2 }}>
               {groups.length === 0 ? (
@@ -136,7 +134,7 @@ export default function Layout({ children }) {
                             fontSize: 13,
                             fontWeight: active ? 600 : 400,
                             color: active ? 'primary.main' : 'text.primary',
-                            noWrap: true
+                            noWrap: true,
                           }}
                         />
                       </ListItemButton>
@@ -146,6 +144,17 @@ export default function Layout({ children }) {
               })}
             </List>
           </Collapse>
+
+          {/* ── HERRAMIENTAS ── */}
+          <ListItem disablePadding sx={{ mb: 0.5, mt: 0.5 }}>
+            <ListItemButton onClick={() => navigate('/tools')} sx={navBtnSx('/tools')}>
+              <ListItemIcon><BuildIcon /></ListItemIcon>
+              <ListItemText
+                primary="Herramientas"
+                primaryTypographyProps={{ fontWeight: isActive('/tools') ? 600 : 400 }}
+              />
+            </ListItemButton>
+          </ListItem>
 
         </List>
 
@@ -174,9 +183,10 @@ export default function Layout({ children }) {
             <ListItemText primary="Cerrar sesión" primaryTypographyProps={{ fontSize: 14 }} />
           </ListItemButton>
         </Box>
+
       </Drawer>
 
-      {/* Contenido */}
+      {/* Contenido principal */}
       <Box component="main" sx={{ flexGrow: 1, p: 3, minWidth: 0 }}>
         {children}
       </Box>

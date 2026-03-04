@@ -8,6 +8,9 @@ import Groups from './pages/Groups';
 import GroupDetail from './pages/GroupDetail';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
+import Tools from './pages/Tools';
+import Notes from './components/tools/Notes';
+import Calculator from './components/tools/Calculator';
 
 
 
@@ -85,6 +88,9 @@ function AppRoutes() {
     </RutaProtegida>
   }
 />
+<Route path="/tools" element={<RutaProtegida><Tools /></RutaProtegida>} />
+<Route path="/tools/notes"      element={<Notes />} />
+<Route path="/tools/calculator" element={<Calculator />} />
     </Routes>
   );
 }

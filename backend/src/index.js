@@ -6,6 +6,8 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const groupRoutes = require('./routes/groupRoutes');
 const projectRoutes = require('./routes/projectRoutes');
+const notesRoutes      = require('./routes/notesRoutes');
+const calculatorRoutes = require('./routes/calculatorRoutes');
 
 
 const app = express();
@@ -20,6 +22,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/notes',      notesRoutes);
+app.use('/api/calculator', calculatorRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {
