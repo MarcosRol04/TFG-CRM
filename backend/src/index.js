@@ -8,6 +8,8 @@ const groupRoutes = require('./routes/groupRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const notesRoutes      = require('./routes/notesRoutes');
 const calculatorRoutes = require('./routes/calculatorRoutes');
+const spreadsheetRoutes = require('./routes/spreadsheetRoutes');
+const sharedItemsRoutes = require('./routes/sharedItemsRoutes');
 
 
 const app = express();
@@ -24,6 +26,8 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/notes',      notesRoutes);
 app.use('/api/calculator', calculatorRoutes);
+app.use('/api/spreadsheets', spreadsheetRoutes);
+app.use('/api/shared-items', sharedItemsRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

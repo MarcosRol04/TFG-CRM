@@ -12,6 +12,10 @@ import {
   ArrowBack, Add, Delete, Send, FolderOpen,
   CheckCircle, RadioButtonUnchecked, Person, Edit
 } from '@mui/icons-material';
+import NoteAltIcon from '@mui/icons-material/NoteAlt';
+import CalculateIcon from '@mui/icons-material/Calculate';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import FolderSharedIcon from '@mui/icons-material/FolderShared';
 import axios from 'axios';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +32,98 @@ const STATUS_CONFIG = {
   cancelado:   { label: '❌ Cancelado',   color: 'error'   },
 };
 
+const ITEM_ICONS = {
+  note:        <NoteAltIcon fontSize="small" sx={{ color: '#1976d2' }} />,
+  calculator:  <CalculateIcon fontSize="small" sx={{ color: '#ed6c02' }} />,
+  spreadsheet: <TableChartIcon fontSize="small" sx={{ color: '#2e7d32' }} />,
+};
+const ITEM_LABELS = { note: 'Nota', calculator: 'Cálculo', spreadsheet: 'Hoja de cálculo' };
+
+// ── Componente archivos compartidos ──────────────────────────────────────────
+function SharedFiles({ projectId }) {
+  const token = localStorage.getItem('token');
+  const headers = { Authorization: `Bearer ${token}` };
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    axios.get(`${API}/shared-items/project/${projectId}`, { headers })
+      .then(r => setItems(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [projectId]);
+
+  const handleUnshare = async (shareId) => {
+    try {
+      await axios.delete(`${API}/shared-items/${shareId}`, { headers });
+      setItems(prev => prev.filter(i => i.id !== shareId));
+    } catch {}
+  };
+
+  const getItemTitle = (item) => {
+    if (!item.item_data) return `${ITEM_LABELS[item.item_type]} eliminado`;
+    if (item.item_type === 'calculator') return `${item.item_data.expression} = ${item.item_data.result}`;
+    return item.item_data.name || item.item_data.title || 'Sin título';
+  };
+
+  return (
+    <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
+      <Box display="flex" alignItems="center" gap={1} mb={2}>
+        <FolderSharedIcon color="warning" />
+        <Typography variant="h6" fontWeight={600}>Archivos compartidos ({items.length})</Typography>
+      </Box>
+
+      {loading && <Box display="flex" justifyContent="center" py={2}><CircularProgress size={24} /></Box>}
+
+      {!loading && items.length === 0 && (
+        <Typography variant="body2" color="text.secondary">
+          No hay archivos compartidos con este proyecto todavía.
+        </Typography>
+      )}
+
+      {!loading && items.length > 0 && (
+        <List disablePadding>
+          {items.map(item => (
+            <ListItem
+              key={item.id}
+              disablePadding
+              sx={{
+                mb: 1, px: 1.5, py: 1,
+                bgcolor: 'grey.50', borderRadius: 2,
+                border: '1px solid', borderColor: 'grey.200'
+              }}
+              secondaryAction={
+                <Tooltip title="Dejar de compartir">
+                  <IconButton size="small" color="error" onClick={() => handleUnshare(item.id)}>
+                    <Delete fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              }
+            >
+              <ListItemAvatar sx={{ minWidth: 36 }}>
+                {ITEM_ICONS[item.item_type]}
+              </ListItemAvatar>
+              <ListItemText
+                primary={
+                  <Typography variant="body2" fontWeight={500} noWrap>
+                    {getItemTitle(item)}
+                  </Typography>
+                }
+                secondary={
+                  <Typography variant="caption" color="text.secondary">
+                    {ITEM_LABELS[item.item_type]} · Compartido por {item.users?.name || 'alguien'} · {new Date(item.created_at).toLocaleDateString('es-ES')}
+                  </Typography>
+                }
+              />
+            </ListItem>
+          ))}
+        </List>
+      )}
+    </Paper>
+  );
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
 export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -75,7 +171,6 @@ export default function ProjectDetail() {
   useEffect(() => { fetchAll(); }, [id]);
   useEffect(() => { commentEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [comments]);
 
-  // ── MIEMBROS ──
   const openMembersDialog = () => {
     setSelectedMemberIds(members.map(m => m.id));
     setMembersDialogOpen(true);
@@ -84,24 +179,18 @@ export default function ProjectDetail() {
   const handleSaveMembers = async () => {
     setSavingMembers(true);
     try {
-      await axios.post(`${API}/projects/${id}/members`,
-        { memberIds: selectedMemberIds }, { headers });
+      await axios.post(`${API}/projects/${id}/members`, { memberIds: selectedMemberIds }, { headers });
       const res = await axios.get(`${API}/projects/${id}/members`, { headers });
       setMembers(res.data);
       setMembersDialogOpen(false);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSavingMembers(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setSavingMembers(false); }
   };
 
-  // ── TAREAS ──
   const handleAddTask = async () => {
     if (!newTask.trim()) return;
     try {
-      const res = await axios.post(`${API}/projects/${id}/tasks`,
-        { title: newTask, status: 'pendiente' }, { headers });
+      const res = await axios.post(`${API}/projects/${id}/tasks`, { title: newTask, status: 'pendiente' }, { headers });
       setTasks(prev => [...prev, res.data]);
       setNewTask('');
     } catch (err) { console.error(err); }
@@ -110,8 +199,7 @@ export default function ProjectDetail() {
   const handleToggleTask = async (task) => {
     const newStatus = task.status === 'completado' ? 'pendiente' : 'completado';
     try {
-      const res = await axios.put(`${API}/projects/${id}/tasks/${task.id}`,
-        { ...task, status: newStatus }, { headers });
+      const res = await axios.put(`${API}/projects/${id}/tasks/${task.id}`, { ...task, status: newStatus }, { headers });
       setTasks(prev => prev.map(t => t.id === task.id ? res.data : t));
     } catch (err) { console.error(err); }
   };
@@ -123,12 +211,10 @@ export default function ProjectDetail() {
     } catch (err) { console.error(err); }
   };
 
-  // ── COMENTARIOS ──
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
     try {
-      const res = await axios.post(`${API}/projects/${id}/comments`,
-        { content: newComment, user_id: usuario.id }, { headers });
+      const res = await axios.post(`${API}/projects/${id}/comments`, { content: newComment, user_id: usuario.id }, { headers });
       setComments(prev => [...prev, res.data]);
       setNewComment('');
     } catch (err) { console.error(err); }
@@ -168,42 +254,27 @@ export default function ProjectDetail() {
           {/* Cabecera */}
           <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
             <Box display="flex" alignItems="center" gap={1} mb={2}>
-              <IconButton size="small" onClick={() => navigate('/projects')}>
-                <ArrowBack />
-              </IconButton>
+              <IconButton size="small" onClick={() => navigate('/projects')}><ArrowBack /></IconButton>
               <Typography variant="caption" color="text.secondary">Volver a proyectos</Typography>
             </Box>
             <Box display="flex" justifyContent="space-between" alignItems="flex-start">
               <Box display="flex" alignItems="center" gap={2}>
-                <Avatar sx={{ bgcolor: 'warning.main', width: 52, height: 52 }}>
-                  <FolderOpen />
-                </Avatar>
+                <Avatar sx={{ bgcolor: 'warning.main', width: 52, height: 52 }}><FolderOpen /></Avatar>
                 <Box>
                   <Typography variant="h5" fontWeight={700}>{project.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {project.description || 'Sin descripción'}
-                  </Typography>
-                  {project.groups && (
-                    <Typography variant="caption" color="text.secondary">
-                      Grupo: {project.groups.name}
-                    </Typography>
-                  )}
+                  <Typography variant="body2" color="text.secondary">{project.description || 'Sin descripción'}</Typography>
+                  {project.groups && <Typography variant="caption" color="text.secondary">Grupo: {project.groups.name}</Typography>}
                 </Box>
               </Box>
               <Chip label={config.label} color={config.color} />
             </Box>
-
             {tasks.length > 0 && (
               <Box mt={2}>
                 <Box display="flex" justifyContent="space-between" mb={0.5}>
                   <Typography variant="caption" color="text.secondary">Progreso de tareas</Typography>
                   <Typography variant="caption" fontWeight={600}>{progress}%</Typography>
                 </Box>
-                <LinearProgress
-                  variant="determinate" value={progress}
-                  sx={{ borderRadius: 1, height: 8 }}
-                  color={progress === 100 ? 'success' : 'primary'}
-                />
+                <LinearProgress variant="determinate" value={progress} sx={{ borderRadius: 1, height: 8 }} color={progress === 100 ? 'success' : 'primary'} />
               </Box>
             )}
           </Paper>
@@ -213,30 +284,16 @@ export default function ProjectDetail() {
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
               <Box display="flex" alignItems="center" gap={1}>
                 <Person color="primary" />
-                <Typography variant="h6" fontWeight={600}>
-                  Miembros ({members.length})
-                </Typography>
+                <Typography variant="h6" fontWeight={600}>Miembros ({members.length})</Typography>
               </Box>
-              <Button
-                size="small" variant="outlined"
-                startIcon={<Edit />}
-                onClick={openMembersDialog}
-              >
-                Gestionar
-              </Button>
+              <Button size="small" variant="outlined" startIcon={<Edit />} onClick={openMembersDialog}>Gestionar</Button>
             </Box>
             <Box display="flex" flexWrap="wrap" gap={1}>
               {members.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  Sin miembros asignados. Pulsa "Gestionar" para añadir.
-                </Typography>
+                <Typography variant="body2" color="text.secondary">Sin miembros asignados. Pulsa "Gestionar" para añadir.</Typography>
               ) : members.map(m => (
                 <Tooltip key={m.id} title={m.email}>
-                  <Chip
-                    avatar={<Avatar sx={{ bgcolor: getColor(m.name) }}>{m.name?.[0]?.toUpperCase()}</Avatar>}
-                    label={m.name}
-                    variant="outlined"
-                  />
+                  <Chip avatar={<Avatar sx={{ bgcolor: getColor(m.name) }}>{m.name?.[0]?.toUpperCase()}</Avatar>} label={m.name} variant="outlined" />
                 </Tooltip>
               ))}
             </Box>
@@ -244,21 +301,10 @@ export default function ProjectDetail() {
 
           {/* Tareas */}
           <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
-            <Typography variant="h6" fontWeight={600} mb={2}>
-              ✅ Tareas ({completedTasks}/{tasks.length})
-            </Typography>
+            <Typography variant="h6" fontWeight={600} mb={2}>✅ Tareas ({completedTasks}/{tasks.length})</Typography>
             <Box display="flex" gap={1} mb={2}>
-              <TextField
-                size="small" fullWidth
-                placeholder="Nueva tarea..."
-                value={newTask}
-                onChange={e => setNewTask(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAddTask()}
-              />
-              <Button variant="contained" startIcon={<Add />} onClick={handleAddTask}
-                disabled={!newTask.trim()}>
-                Añadir
-              </Button>
+              <TextField size="small" fullWidth placeholder="Nueva tarea..." value={newTask} onChange={e => setNewTask(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTask()} />
+              <Button variant="contained" startIcon={<Add />} onClick={handleAddTask} disabled={!newTask.trim()}>Añadir</Button>
             </Box>
             {tasks.length === 0 ? (
               <Typography variant="body2" color="text.secondary">No hay tareas. ¡Añade la primera!</Typography>
@@ -268,77 +314,46 @@ export default function ProjectDetail() {
                   <ListItem
                     key={task.id}
                     disablePadding
-                    sx={{
-                      mb: 0.5, px: 1, py: 0.5,
-                      bgcolor: task.status === 'completado' ? 'success.50' : 'grey.50',
-                      borderRadius: 2, border: '1px solid',
-                      borderColor: task.status === 'completado' ? 'success.200' : 'grey.200',
-                    }}
+                    sx={{ mb: 0.5, px: 1, py: 0.5, bgcolor: task.status === 'completado' ? 'success.50' : 'grey.50', borderRadius: 2, border: '1px solid', borderColor: task.status === 'completado' ? 'success.200' : 'grey.200' }}
                     secondaryAction={
-                      <IconButton size="small" color="error" onClick={() => handleDeleteTask(task.id)}>
-                        <Delete fontSize="small" />
-                      </IconButton>
+                      <IconButton size="small" color="error" onClick={() => handleDeleteTask(task.id)}><Delete fontSize="small" /></IconButton>
                     }
                   >
-                    <Checkbox
-                      icon={<RadioButtonUnchecked />}
-                      checkedIcon={<CheckCircle color="success" />}
-                      checked={task.status === 'completado'}
-                      onChange={() => handleToggleTask(task)}
-                      size="small"
-                    />
+                    <Checkbox icon={<RadioButtonUnchecked />} checkedIcon={<CheckCircle color="success" />} checked={task.status === 'completado'} onChange={() => handleToggleTask(task)} size="small" />
                     <ListItemText
                       primary={task.title}
-                      primaryTypographyProps={{
-                        fontSize: 14,
-                        sx: {
-                          textDecoration: task.status === 'completado' ? 'line-through' : 'none',
-                          color: task.status === 'completado' ? 'text.secondary' : 'text.primary'
-                        }
-                      }}
+                      primaryTypographyProps={{ fontSize: 14, sx: { textDecoration: task.status === 'completado' ? 'line-through' : 'none', color: task.status === 'completado' ? 'text.secondary' : 'text.primary' } }}
                     />
                   </ListItem>
                 ))}
               </List>
             )}
           </Paper>
+
+          {/* ── ARCHIVOS COMPARTIDOS ── */}
+          <SharedFiles projectId={id} />
+
         </Box>
 
         {/* ── COLUMNA DERECHA — COMENTARIOS ── */}
-        <Paper elevation={2} sx={{
-          width: 340, borderRadius: 3, display: 'flex',
-          flexDirection: 'column', overflow: 'hidden', flexShrink: 0
-        }}>
+        <Paper elevation={2} sx={{ width: 340, borderRadius: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
           <Box sx={{ px: 2, py: 1.5, bgcolor: 'warning.main' }}>
             <Typography variant="subtitle1" fontWeight={600} color="white">💬 Comentarios</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)' }}>
-              {comments.length} comentario{comments.length !== 1 ? 's' : ''}
-            </Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)' }}>{comments.length} comentario{comments.length !== 1 ? 's' : ''}</Typography>
           </Box>
-
           <Divider />
-
           <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {comments.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" textAlign="center" mt={4}>
-                Sin comentarios aún
-              </Typography>
+              <Typography variant="body2" color="text.secondary" textAlign="center" mt={4}>Sin comentarios aún</Typography>
             ) : comments.map(comment => (
-              <Box key={comment.id} sx={{
-                bgcolor: 'grey.50', borderRadius: 2, p: 1.5,
-                border: '1px solid', borderColor: 'grey.200'
-              }}>
+              <Box key={comment.id} sx={{ bgcolor: 'grey.50', borderRadius: 2, p: 1.5, border: '1px solid', borderColor: 'grey.200' }}>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
                   <Box display="flex" alignItems="center" gap={0.5}>
-                    <Avatar sx={{ width: 22, height: 22, fontSize: 11, bgcolor: getColor(comment.users?.name) }}>
-                      {comment.users?.name?.[0]?.toUpperCase()}
-                    </Avatar>
+                    <Avatar sx={{ width: 22, height: 22, fontSize: 11, bgcolor: getColor(comment.users?.name) }}>{comment.users?.name?.[0]?.toUpperCase()}</Avatar>
                     <Typography variant="caption" fontWeight={600}>{comment.users?.name}</Typography>
                   </Box>
                   <Box display="flex" alignItems="center" gap={0.5}>
-                    <Typography variant="caption" color="text.secondary">
-                      {new Date(comment.created_at).toLocaleDateString('es-ES')}
-                    </Typography>
+                    <Typography variant="caption" color="text.secondary">{new Date(comment.created_at).toLocaleDateString('es-ES')}</Typography>
                     {comment.user_id === usuario?.id && (
                       <IconButton size="small" onClick={() => handleDeleteComment(comment.id)}>
                         <Delete sx={{ fontSize: 14, color: 'error.main' }} />
@@ -351,26 +366,15 @@ export default function ProjectDetail() {
             ))}
             <div ref={commentEndRef} />
           </Box>
-
           <Divider />
-
           <Box sx={{ p: 1.5, display: 'flex', gap: 1 }}>
-            <TextField
-              size="small" fullWidth
-              placeholder="Escribe un comentario..."
-              value={newComment}
-              onChange={e => setNewComment(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAddComment()}
-              multiline maxRows={3}
-            />
-            <IconButton color="warning" onClick={handleAddComment} disabled={!newComment.trim()}>
-              <Send />
-            </IconButton>
+            <TextField size="small" fullWidth placeholder="Escribe un comentario..." value={newComment} onChange={e => setNewComment(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddComment()} multiline maxRows={3} />
+            <IconButton color="warning" onClick={handleAddComment} disabled={!newComment.trim()}><Send /></IconButton>
           </Box>
         </Paper>
       </Box>
 
-      {/* ── DIALOG MIEMBROS ── */}
+      {/* Dialog miembros */}
       <Dialog open={membersDialogOpen} onClose={() => setMembersDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Gestionar miembros del proyecto</DialogTitle>
         <DialogContent>
@@ -391,9 +395,7 @@ export default function ProjectDetail() {
               )}
             >
               {allUsers.map(user => (
-                <MenuItem key={user.id} value={user.id}>
-                  {user.name} — {user.email}
-                </MenuItem>
+                <MenuItem key={user.id} value={user.id}>{user.name} — {user.email}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -405,7 +407,6 @@ export default function ProjectDetail() {
           </Button>
         </DialogActions>
       </Dialog>
-
     </Layout>
   );
 }

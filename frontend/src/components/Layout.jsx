@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon,
-  ListItemText, Typography, Divider, Avatar, Collapse, Tooltip
+  ListItemText, Typography, Divider, Avatar, Collapse, Tooltip,
+  CircularProgress // ← IMPORTANTE: añade esto
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon, People, Group,
@@ -22,13 +23,51 @@ export default function Layout({ children }) {
   const location = useLocation();
   const [groupsOpen, setGroupsOpen] = useState(true);
   const [groups, setGroups] = useState([]);
+  const [loadingGroups, setLoadingGroups] = useState(false); // ← nuevo estado
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    axios.get(`${API}/groups`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => setGroups(res.data))
-      .catch(console.error);
-  }, [location.pathname]);
+    const fetchGroups = async () => {
+      const token = localStorage.getItem('token');
+      
+      // ⚠️ Si no hay token, no hacer la petición
+      if (!token) {
+        console.log('⏳ No hay token disponible, omitiendo carga de grupos');
+        setGroups([]); // Limpiar grupos
+        return;
+      }
+
+      setLoadingGroups(true); // Empezar carga
+
+      try {
+        console.log('📡 Cargando grupos...');
+        const res = await axios.get(`${API}/groups`, { 
+          headers: { Authorization: `Bearer ${token}` } 
+        });
+        console.log('✅ Grupos cargados:', res.data);
+        setGroups(res.data);
+      } catch (error) {
+        console.error('❌ Error al cargar grupos:', error);
+        
+        // Si es error 401, el token es inválido o expiró
+        if (error.response?.status === 401) {
+          console.log('🔑 Token inválido o expirado');
+          localStorage.removeItem('token');
+          localStorage.removeItem('usuario');
+          
+          // Redirigir a login si no estamos ya allí
+          if (!location.pathname.includes('/login')) {
+            navigate('/login');
+          }
+        }
+        
+        setGroups([]); // Limpiar grupos en caso de error
+      } finally {
+        setLoadingGroups(false); // Terminar carga
+      }
+    };
+
+    fetchGroups();
+  }, [location.pathname, navigate]); // Añadido navigate como dependencia
 
   const navItems = [
     { label: 'Dashboard',    icon: <DashboardIcon />, path: '/dashboard' },
@@ -93,7 +132,10 @@ export default function Layout({ children }) {
           {/* Grupos — desplegable */}
           <ListItem disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
-              onClick={() => { navigate('/groups'); setGroupsOpen(!groupsOpen); }}
+              onClick={() => { 
+                navigate('/groups'); 
+                setGroupsOpen(!groupsOpen); 
+              }}
               sx={navBtnSx('/groups')}
             >
               <ListItemIcon><Group /></ListItemIcon>
@@ -105,12 +147,18 @@ export default function Layout({ children }) {
             </ListItemButton>
           </ListItem>
 
-          {/* Lista de grupos */}
+          {/* Lista de grupos con estado de carga */}
           <Collapse in={groupsOpen} timeout="auto" unmountOnExit>
             <List disablePadding sx={{ pl: 2 }}>
-              {groups.length === 0 ? (
+              {loadingGroups ? (
+                <ListItem sx={{ py: 1, justifyContent: 'center' }}>
+                  <CircularProgress size={20} />
+                </ListItem>
+              ) : groups.length === 0 ? (
                 <ListItem sx={{ py: 0.5 }}>
-                  <Typography variant="caption" color="text.secondary">Sin grupos</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {localStorage.getItem('token') ? 'No hay grupos' : 'Inicia sesión'}
+                  </Typography>
                 </ListItem>
               ) : groups.map(group => {
                 const active = location.pathname === `/groups/${group.id}`;
@@ -160,30 +208,31 @@ export default function Layout({ children }) {
 
         <Divider />
 
-        {/* Usuario + logout */}
-        <Box sx={{ p: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-            <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36, fontSize: 14 }}>
-              {usuario?.name?.[0]?.toUpperCase()}
-            </Avatar>
-            <Box sx={{ overflow: 'hidden' }}>
-              <Typography variant="body2" fontWeight={600} noWrap>{usuario?.name}</Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>{usuario?.role}</Typography>
+        {/* Usuario + logout - Solo mostrar si hay usuario */}
+        {usuario && (
+          <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+              <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36, fontSize: 14 }}>
+                {usuario?.name?.[0]?.toUpperCase()}
+              </Avatar>
+              <Box sx={{ overflow: 'hidden' }}>
+                <Typography variant="body2" fontWeight={600} noWrap>{usuario?.name}</Typography>
+                <Typography variant="caption" color="text.secondary" noWrap>{usuario?.role}</Typography>
+              </Box>
             </Box>
+            <ListItemButton
+              onClick={logout}
+              sx={{
+                borderRadius: 2, color: 'error.main',
+                '&:hover': { bgcolor: '#fff5f5' },
+                '& .MuiListItemIcon-root': { color: 'error.main', minWidth: 36 },
+              }}
+            >
+              <ListItemIcon><Logout fontSize="small" /></ListItemIcon>
+              <ListItemText primary="Cerrar sesión" primaryTypographyProps={{ fontSize: 14 }} />
+            </ListItemButton>
           </Box>
-          <ListItemButton
-            onClick={logout}
-            sx={{
-              borderRadius: 2, color: 'error.main',
-              '&:hover': { bgcolor: '#fff5f5' },
-              '& .MuiListItemIcon-root': { color: 'error.main', minWidth: 36 },
-            }}
-          >
-            <ListItemIcon><Logout fontSize="small" /></ListItemIcon>
-            <ListItemText primary="Cerrar sesión" primaryTypographyProps={{ fontSize: 14 }} />
-          </ListItemButton>
-        </Box>
-
+        )}
       </Drawer>
 
       {/* Contenido principal */}
