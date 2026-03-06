@@ -168,13 +168,6 @@ export default function Dashboard() {
     return `Hace ${diffDays} días`;
   };
 
-  // Calcular tendencias (comparando con período anterior)
-  const getTrend = (current, previous) => {
-    if (!previous) return '+0%';
-    const change = ((current - previous) / previous) * 100;
-    return change > 0 ? `+${Math.round(change)}%` : `${Math.round(change)}%`;
-  };
-
   if (loading) {
     return (
       <Layout>
@@ -222,7 +215,6 @@ export default function Dashboard() {
                 icon={<People />}
                 label="Usuarios activos"
                 value={stats.usuarios.activos}
-                trend={getTrend(stats.usuarios.activos, 100)} // Ajusta según datos históricos
                 color="#667eea"
                 onClick={() => navigate('/users')}
               />
@@ -232,7 +224,6 @@ export default function Dashboard() {
                 icon={<Group />}
                 label="Grupos"
                 value={stats.grupos.total}
-                trend={getTrend(stats.grupos.total, 10)}
                 color="#764ba2"
                 onClick={() => navigate('/groups')}
               />
@@ -242,7 +233,6 @@ export default function Dashboard() {
                 icon={<FolderOpen />}
                 label="Proyectos"
                 value={stats.proyectos.total}
-                trend={getTrend(stats.proyectos.total, 30)}
                 color="#f093fb"
                 onClick={() => navigate('/projects')}
               />
@@ -365,9 +355,7 @@ const DigitalClock = () => {
   );
 };
 
-const GlassStatCard = ({ icon, label, value, trend, color, onClick }) => {
-  const isPositive = !trend.startsWith('-');
-  
+const GlassStatCard = ({ icon, label, value, color, onClick }) => {
   return (
     <Zoom in={true} style={{ transitionDelay: '100ms' }}>
       <Paper
@@ -397,13 +385,6 @@ const GlassStatCard = ({ icon, label, value, trend, color, onClick }) => {
           }}>
             {icon}
           </Box>
-          <Chip 
-            icon={isPositive ? <TrendingUp /> : <TrendingDown />}
-            label={trend}
-            size="small"
-            color={isPositive ? 'success' : 'error'}
-            sx={{ fontWeight: 600 }}
-          />
         </Box>
         
         <Typography variant="h4" fontWeight="bold" sx={{ mt: 2, mb: 0.5 }}>
