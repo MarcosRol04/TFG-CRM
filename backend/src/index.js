@@ -10,7 +10,7 @@ const notesRoutes      = require('./routes/notesRoutes');
 const calculatorRoutes = require('./routes/calculatorRoutes');
 const spreadsheetRoutes = require('./routes/spreadsheetRoutes');
 const sharedItemsRoutes = require('./routes/sharedItemsRoutes');
-
+const pollsRoutes = require('./routes/pollsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -28,6 +28,7 @@ app.use('/api/notes',      notesRoutes);
 app.use('/api/calculator', calculatorRoutes);
 app.use('/api/spreadsheets', spreadsheetRoutes);
 app.use('/api/shared-items', sharedItemsRoutes);
+app.use('/api/polls', pollsRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {

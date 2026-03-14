@@ -12,6 +12,9 @@ import Tools from './pages/Tools';
 import Notes from './components/tools/Notes';
 import Calculator from './components/tools/Calculator';
 import Spreadsheet from './components/tools/Spreadsheet';
+import Polls from './components/tools/Polls';
+import PollForm from './components/tools/PollForm';
+import PollDetail from './components/tools/PollDetail';
 
 
 
@@ -92,6 +95,10 @@ function AppRoutes() {
 <Route path="/tools/notes"      element={<Notes />} />
 <Route path="/tools/calculator" element={<Calculator />} />
 <Route path="/tools/spreadsheet" element={<RutaProtegida><Spreadsheet /></RutaProtegida>} />
+<Route path="/tools/polls" element={<Polls />} />
+<Route path="/tools/polls/new" element={<PollForm />} />
+<Route path="/tools/polls/:id" element={<PollDetail />} />
+<Route path="/tools/polls/:id/edit" element={<PollForm />} />
     </Routes>
   );
 }

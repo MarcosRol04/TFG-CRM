@@ -16,6 +16,7 @@ import NoteAltIcon from '@mui/icons-material/NoteAlt';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import FolderSharedIcon from '@mui/icons-material/FolderShared';
+import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import axios from 'axios';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
@@ -39,7 +40,88 @@ const ITEM_ICONS = {
 };
 const ITEM_LABELS = { note: 'Nota', calculator: 'Cálculo', spreadsheet: 'Hoja de cálculo' };
 
-// ── Componente archivos compartidos ──────────────────────────────────────────
+// ── Encuestas del proyecto ────────────────────────────────────────────────────
+function PollsSection({ projectId }) {
+  const navigate = useNavigate();
+  const token = localStorage.getItem('token');
+  const headers = { Authorization: `Bearer ${token}` };
+  const [polls, setPolls] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    axios.get(`${API}/polls`, { headers })
+      .then(r => {
+        const all = r.data?.data || [];
+        setPolls(all.filter(p => p.shared_with_type === 'project' && p.shared_with_id === projectId));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [projectId]);
+
+  const isClosed = (p) => !p.is_active || (p.deadline && new Date(p.deadline) < new Date());
+
+  return (
+    <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
+      <Box display="flex" alignItems="center" gap={1} mb={2}>
+        <HowToVoteIcon color="secondary" />
+        <Typography variant="h6" fontWeight={600}>Encuestas ({polls.length})</Typography>
+      </Box>
+
+      {loading && <Box display="flex" justifyContent="center" py={2}><CircularProgress size={24} /></Box>}
+
+      {!loading && polls.length === 0 && (
+        <Typography variant="body2" color="text.secondary">
+          No hay encuestas asociadas a este proyecto.
+        </Typography>
+      )}
+
+      {!loading && polls.length > 0 && (
+        <List disablePadding>
+          {polls.map(poll => (
+            <ListItem
+              key={poll.id}
+              disablePadding
+              onClick={() => navigate(`/tools/polls/${poll.id}`)}
+              sx={{
+                mb: 1, px: 1.5, py: 1, cursor: 'pointer',
+                bgcolor: 'grey.50', borderRadius: 2,
+                border: '1px solid', borderColor: 'grey.200',
+                '&:hover': { bgcolor: 'grey.100' },
+              }}
+            >
+              <ListItemAvatar sx={{ minWidth: 36 }}>
+                <HowToVoteIcon fontSize="small" sx={{ color: '#9c27b0' }} />
+              </ListItemAvatar>
+              <ListItemText
+                primary={
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Typography variant="body2" fontWeight={500} noWrap>{poll.title}</Typography>
+                    <Chip
+                      size="small"
+                      label={isClosed(poll) ? 'Cerrada' : 'Activa'}
+                      color={isClosed(poll) ? 'default' : 'success'}
+                      sx={{ height: 18, fontSize: '0.65rem' }}
+                    />
+                    {poll.user_has_voted && (
+                      <Chip size="small" label="✓ Votado" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />
+                    )}
+                  </Box>
+                }
+                secondary={
+                  <Typography variant="caption" color="text.secondary">
+                    {poll.total_votes || 0} votos · {poll.poll_options?.length || 0} opciones
+                  </Typography>
+                }
+              />
+            </ListItem>
+          ))}
+        </List>
+      )}
+    </Paper>
+  );
+}
+
+// ── Archivos compartidos ──────────────────────────────────────────────────────
 function SharedFiles({ projectId }) {
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
@@ -329,6 +411,9 @@ export default function ProjectDetail() {
               </List>
             )}
           </Paper>
+
+          {/* ── ENCUESTAS ── */}
+          <PollsSection projectId={id} />
 
           {/* ── ARCHIVOS COMPARTIDOS ── */}
           <SharedFiles projectId={id} />
