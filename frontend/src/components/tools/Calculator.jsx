@@ -4,11 +4,15 @@ import ShareDialog from './ShareDialog';
 import {
   Box, Typography, Button, IconButton, Paper,
   List, ListItem, ListItemText, Divider,
-  Snackbar, Alert, Tooltip, CircularProgress
+  Snackbar, Alert, Tooltip, CircularProgress, alpha,
+  Fade, Zoom, Chip
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ShareIcon from '@mui/icons-material/Share';
 import BackspaceIcon from '@mui/icons-material/Backspace';
+import HistoryIcon from '@mui/icons-material/History';
+import CalculateIcon from '@mui/icons-material/Calculate';
+import KeyboardIcon from '@mui/icons-material/Keyboard';
 
 const API = 'http://localhost:5000/api';
 
@@ -147,133 +151,364 @@ export default function Calculator() {
   };
 
   const getBtnStyle = (value) => {
-    if (value === '=') return { bgcolor: '#1976d2', color: '#fff', '&:hover': { bgcolor: '#1565c0' } };
-    if (isOperator(value)) return { bgcolor: '#e3f2fd', color: '#1976d2', fontWeight: 'bold', '&:hover': { bgcolor: '#bbdefb' } };
-    if (['C', '±', '%'].includes(value)) return { bgcolor: '#f5f5f5', color: '#555', '&:hover': { bgcolor: '#e0e0e0' } };
-    return { bgcolor: '#fff', color: '#222', '&:hover': { bgcolor: '#f5f5f5' } };
+    if (value === '=') return { 
+      bgcolor: '#667eea', 
+      color: '#fff', 
+      '&:hover': { bgcolor: '#5a6fd6', transform: 'scale(0.98)' } 
+    };
+    if (isOperator(value)) return { 
+      bgcolor: alpha('#667eea', 0.1), 
+      color: '#667eea', 
+      fontWeight: 'bold',
+      '&:hover': { bgcolor: alpha('#667eea', 0.2), transform: 'scale(0.98)' } 
+    };
+    if (['C', '±', '%'].includes(value)) return { 
+      bgcolor: '#f5f5f5', 
+      color: '#666',
+      '&:hover': { bgcolor: '#e0e0e0', transform: 'scale(0.98)' } 
+    };
+    return { 
+      bgcolor: '#fff', 
+      color: '#333',
+      '&:hover': { bgcolor: '#f5f5f5', transform: 'scale(0.98)' } 
+    };
   };
 
   return (
     <Layout>
-      <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
-        <Typography variant="h5" fontWeight="bold" mb={3}>🔢 Calculadora</Typography>
+      <Box sx={{ 
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        py: 4
+      }}>
+        <Paper 
+          elevation={0}
+          sx={{ 
+            maxWidth: 1200, 
+            mx: 'auto', 
+            borderRadius: 3,
+            overflow: 'hidden',
+            bgcolor: 'background.default'
+          }}
+        >
+          {/* Header */}
+          <Box sx={{ 
+            p: 3, 
+            background: 'linear-gradient(to right, #f8f9fa, #ffffff)',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2
+          }}>
+            <CalculateIcon sx={{ fontSize: 32, color: '#667eea' }} />
+            <Typography variant="h5" fontWeight="600" sx={{ 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              flexGrow: 1
+            }}>
+              Calculadora Científica
+            </Typography>
+            <Chip
+              icon={<KeyboardIcon />}
+              label="Teclado físico soportado"
+              size="small"
+              sx={{ 
+                bgcolor: alpha('#667eea', 0.1),
+                color: '#667eea',
+                '& .MuiChip-icon': { color: '#667eea' }
+              }}
+            />
+          </Box>
 
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
 
-          {/* Calculadora */}
-          <Paper sx={{ border: '1px solid #e0e0e0', p: 2, width: 300, flexShrink: 0 }}>
+              {/* Calculadora */}
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  width: 340, 
+                  flexShrink: 0,
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: alpha('#000', 0.08),
+                  overflow: 'hidden'
+                }}
+              >
+                {/* Display */}
+                <Box sx={{ 
+                  bgcolor: '#1a1f36', 
+                  p: 2.5,
+                  background: 'linear-gradient(145deg, #1a1f36 0%, #14182c 100%)'
+                }}>
+                  <Typography variant="caption" sx={{ 
+                    color: alpha('#fff', 0.5), 
+                    mb: 0.5, 
+                    fontFamily: 'monospace',
+                    fontSize: 14,
+                    display: 'block',
+                    textAlign: 'right'
+                  }}>
+                    {expression || ' '}
+                  </Typography>
+                  <Typography variant="h3" sx={{ 
+                    color: '#fff', 
+                    fontFamily: 'monospace', 
+                    wordBreak: 'break-all', 
+                    textAlign: 'right',
+                    fontWeight: 300,
+                    letterSpacing: 2,
+                    lineHeight: 1.2
+                  }}>
+                    {display}
+                  </Typography>
+                </Box>
 
-            {/* Display */}
-            <Box sx={{ bgcolor: '#1a1a2e', borderRadius: 1, p: 2, mb: 2, minHeight: 80, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-end' }}>
-              <Typography variant="caption" sx={{ color: '#888', mb: 0.5, fontFamily: 'monospace', minHeight: 18 }}>
-                {expression}
-              </Typography>
-              <Typography variant="h4" sx={{ color: '#fff', fontFamily: 'monospace', wordBreak: 'break-all', textAlign: 'right' }}>
-                {display}
-              </Typography>
-            </Box>
+                {/* Botones */}
+                <Box sx={{ p: 2 }}>
+                  {BUTTONS.map((row, ri) => (
+                    <Box key={ri} sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                      {row.map(btn => (
+                        <Button
+                          key={btn}
+                          variant="outlined"
+                          onClick={() => handleInput(btn)}
+                          sx={{
+                            flex: btn === '0' ? 2 : 1,
+                            minWidth: 0,
+                            fontSize: 20,
+                            fontWeight: 500,
+                            py: 1.8,
+                            border: '1px solid',
+                            borderColor: alpha('#000', 0.08),
+                            borderRadius: 2,
+                            transition: 'all 0.2s ease',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                            ...getBtnStyle(btn)
+                          }}
+                        >
+                          {btn === '⌫' ? <BackspaceIcon fontSize="small" /> : btn}
+                        </Button>
+                      ))}
+                    </Box>
+                  ))}
+                </Box>
+              </Paper>
 
-            {/* Botones */}
-            {BUTTONS.map((row, ri) => (
-              <Box key={ri} sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                {row.map(btn => (
-                  <Button
-                    key={btn}
-                    variant="outlined"
-                    onClick={() => handleInput(btn)}
-                    sx={{
-                      flex: btn === '0' ? 2 : 1,
-                      minWidth: 0,
-                      fontSize: 18,
-                      fontWeight: 500,
-                      py: 1.5,
-                      border: '1px solid #e0e0e0',
-                      borderRadius: 1,
-                      ...getBtnStyle(btn)
-                    }}
-                  >
-                    {btn === '⌫' ? <BackspaceIcon fontSize="small" /> : btn}
-                  </Button>
-                ))}
-              </Box>
-            ))}
-          </Paper>
-
-          {/* Historial */}
-          <Paper sx={{ border: '1px solid #e0e0e0', flex: 1, minWidth: 260, maxHeight: 460, display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
-              <Typography variant="subtitle1" fontWeight="bold">Historial</Typography>
-            </Box>
-
-            {loadingHistory && <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} /></Box>}
-
-            {!loadingHistory && history.length === 0 && (
-              <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography color="text.secondary" variant="body2">Sin operaciones todavía</Typography>
-              </Box>
-            )}
-
-            <List sx={{ overflowY: 'auto', flex: 1, p: 0 }}>
-              {history.map((item, idx) => (
-                <React.Fragment key={item.id}>
-                  <ListItem
-                    sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f9f9f9' }, py: 0.5 }}
-                    onClick={() => loadFromHistory(item)}
-                    secondaryAction={
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Tooltip title="Compartir">
-                          <IconButton size="small" onClick={(e) => { e.stopPropagation(); setShareItem(item); }}>
-                            <ShareIcon fontSize="small" sx={{ color: '#1976d2' }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Eliminar">
-                          <IconButton size="small" onClick={(e) => { e.stopPropagation(); deleteHistoryItem(item.id); }}>
-                            <DeleteIcon fontSize="small" sx={{ color: '#d32f2f' }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    }
-                  >
-                    <ListItemText
-                      primary={
-                        <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#555' }}>
-                          {item.expression}
-                        </Typography>
-                      }
-                      secondary={
-                        <Typography variant="subtitle2" fontWeight="bold" sx={{ fontFamily: 'monospace', color: '#1976d2' }}>
-                          = {item.result}
-                        </Typography>
-                      }
+              {/* Historial */}
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  flex: 1, 
+                  minWidth: 300,
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: alpha('#000', 0.08),
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: 500,
+                  overflow: 'hidden'
+                }}
+              >
+                <Box sx={{ 
+                  p: 2.5, 
+                  borderBottom: '1px solid',
+                  borderColor: alpha('#000', 0.08),
+                  background: 'linear-gradient(to right, #f8f9fa, #ffffff)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}>
+                  <HistoryIcon sx={{ color: '#667eea' }} />
+                  <Typography variant="subtitle1" fontWeight="600" sx={{ flexGrow: 1 }}>
+                    Historial de operaciones
+                  </Typography>
+                  {!loadingHistory && history.length > 0 && (
+                    <Chip
+                      label={`${history.length} items`}
+                      size="small"
+                      sx={{ 
+                        bgcolor: alpha('#667eea', 0.1),
+                        color: '#667eea',
+                        fontSize: 12
+                      }}
                     />
-                  </ListItem>
-                  {idx < history.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-            </List>
+                  )}
+                </Box>
 
-            {history.length > 0 && (
-              <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', textAlign: 'right' }}>
-                <Typography variant="caption" color="text.secondary">{history.length} operaciones guardadas</Typography>
-              </Box>
+                {loadingHistory && (
+                  <Fade in={loadingHistory}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+                      <CircularProgress size={32} sx={{ color: '#667eea' }} />
+                    </Box>
+                  </Fade>
+                )}
+
+                {!loadingHistory && history.length === 0 && (
+                  <Fade in={!loadingHistory}>
+                    <Box sx={{ 
+                      p: 4, 
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 2
+                    }}>
+                      <HistoryIcon sx={{ fontSize: 48, color: alpha('#667eea', 0.2) }} />
+                      <Typography color="text.secondary" variant="body2">
+                        Sin operaciones todavía
+                      </Typography>
+                      <Typography color="text.secondary" variant="caption" sx={{ maxWidth: 200 }}>
+                        Realiza cálculos y aparecerán aquí automáticamente
+                      </Typography>
+                    </Box>
+                  </Fade>
+                )}
+
+                {!loadingHistory && history.length > 0 && (
+                  <List sx={{ 
+                    overflowY: 'auto', 
+                    flex: 1, 
+                    p: 0,
+                    '&::-webkit-scrollbar': {
+                      width: 6,
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: '#f1f1f1',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: '#888',
+                      borderRadius: 3,
+                    },
+                    '&::-webkit-scrollbar-thumb:hover': {
+                      background: '#555',
+                    },
+                  }}>
+                    {history.map((item, idx) => (
+                      <Zoom in={true} style={{ transitionDelay: `${idx * 30}ms` }} key={item.id}>
+                        <div>
+                          <ListItem
+                            sx={{ 
+                              cursor: 'pointer', 
+                              transition: 'all 0.2s ease',
+                              '&:hover': { 
+                                bgcolor: alpha('#667eea', 0.04),
+                                transform: 'translateX(4px)'
+                              },
+                              py: 1.5,
+                              px: 2
+                            }}
+                            onClick={() => loadFromHistory(item)}
+                            secondaryAction={
+                              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                <Tooltip title="Compartir" arrow placement="left">
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={(e) => { e.stopPropagation(); setShareItem(item); }}
+                                    sx={{ 
+                                      color: '#667eea',
+                                      '&:hover': { bgcolor: alpha('#667eea', 0.1) }
+                                    }}
+                                  >
+                                    <ShareIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Eliminar" arrow placement="right">
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={(e) => { e.stopPropagation(); deleteHistoryItem(item.id); }}
+                                    sx={{ 
+                                      color: '#d32f2f',
+                                      '&:hover': { bgcolor: alpha('#d32f2f', 0.1) }
+                                    }}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            }
+                          >
+                            <ListItemText
+                              primary={
+                                <Typography variant="body2" sx={{ 
+                                  fontFamily: 'monospace', 
+                                  color: '#666',
+                                  fontSize: 14,
+                                  mb: 0.5
+                                }}>
+                                  {item.expression}
+                                </Typography>
+                              }
+                              secondary={
+                                <Typography variant="h6" sx={{ 
+                                  fontFamily: 'monospace', 
+                                  fontWeight: 600,
+                                  color: '#667eea',
+                                  fontSize: 18
+                                }}>
+                                  = {item.result}
+                                </Typography>
+                              }
+                            />
+                          </ListItem>
+                          {idx < history.length - 1 && (
+                            <Divider sx={{ borderColor: alpha('#000', 0.06) }} />
+                          )}
+                        </div>
+                      </Zoom>
+                    ))}
+                  </List>
+                )}
+
+                {history.length > 0 && (
+                  <Box sx={{ 
+                    p: 1.5, 
+                    borderTop: '1px solid',
+                    borderColor: alpha('#000', 0.08),
+                    textAlign: 'right',
+                    bgcolor: '#fafafa'
+                  }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12 }}>
+                      {history.length} operaciones guardadas • Click en cualquier item para cargarlo
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+            </Box>
+
+            {/* Share dialog */}
+            {shareItem && (
+              <ShareDialog
+                open={!!shareItem}
+                onClose={() => setShareItem(null)}
+                itemType="calculator"
+                itemId={shareItem.id}
+                itemName={`${shareItem.expression} = ${shareItem.result}`}
+              />
             )}
-          </Paper>
-        </Box>
 
-        {/* Share dialog */}
-        {shareItem && (
-          <ShareDialog
-            open={!!shareItem}
-            onClose={() => setShareItem(null)}
-            itemType="calculator"
-            itemId={shareItem.id}
-            itemName={`${shareItem.expression} = ${shareItem.result}`}
-          />
-        )}
-
-        <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack(p => ({ ...p, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-          <Alert severity={snack.sev} variant="filled">{snack.msg}</Alert>
-        </Snackbar>
+            <Snackbar 
+              open={snack.open} 
+              autoHideDuration={3000} 
+              onClose={() => setSnack(p => ({ ...p, open: false }))} 
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+              TransitionComponent={Fade}
+            >
+              <Alert 
+                severity={snack.sev} 
+                variant="filled"
+                sx={{ 
+                  borderRadius: 2,
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.2)'
+                }}
+              >
+                {snack.msg}
+              </Alert>
+            </Snackbar>
+          </Box>
+        </Paper>
       </Box>
     </Layout>
   );
