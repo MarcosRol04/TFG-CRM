@@ -6,7 +6,7 @@ import {
   ListItemText, CircularProgress, Tooltip, Checkbox,
   LinearProgress, Dialog, DialogTitle, DialogContent,
   DialogActions, MenuItem, Select, FormControl, InputLabel,
-  OutlinedInput
+  OutlinedInput, Alert
 } from '@mui/material';
 import {
   ArrowBack, Add, Delete, Send, FolderOpen,
@@ -217,6 +217,8 @@ export default function ProjectDetail() {
   const [tasks, setTasks] = useState([]);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [newTask, setNewTask] = useState('');
   const [newComment, setNewComment] = useState('');
@@ -231,6 +233,9 @@ export default function ProjectDetail() {
 
   const fetchAll = async () => {
     try {
+      setLoading(true);
+      setAccessDenied(false);
+      
       const [projRes, membersRes, tasksRes, commentsRes, usersRes] = await Promise.all([
         axios.get(`${API}/projects/${id}`, { headers }),
         axios.get(`${API}/projects/${id}/members`, { headers }),
@@ -245,6 +250,23 @@ export default function ProjectDetail() {
       setAllUsers(usersRes.data);
     } catch (err) {
       console.error(err);
+      // Verificar si es error de acceso denegado (403)
+      if (err.response?.status === 403) {
+        setAccessDenied(true);
+        setErrorMessage(err.response?.data?.error || 'No tienes acceso a este proyecto');
+        // Redirigir después de 2 segundos
+        setTimeout(() => {
+          navigate('/projects');
+        }, 2000);
+      } else if (err.response?.status === 404) {
+        setAccessDenied(true);
+        setErrorMessage('Proyecto no encontrado');
+        setTimeout(() => {
+          navigate('/projects');
+        }, 2000);
+      } else {
+        setErrorMessage('Error al cargar el proyecto');
+      }
     } finally {
       setLoading(false);
     }
@@ -311,6 +333,22 @@ export default function ProjectDetail() {
 
   const completedTasks = tasks.filter(t => t.status === 'completado').length;
   const progress = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
+
+  // Mostrar mensaje de acceso denegado
+  if (accessDenied) {
+    return (
+      <Layout>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <Alert severity="error" sx={{ maxWidth: 500 }}>
+            {errorMessage}
+            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+              Redirigiendo a la lista de proyectos...
+            </Typography>
+          </Alert>
+        </Box>
+      </Layout>
+    );
+  }
 
   if (loading) return (
     <Layout>

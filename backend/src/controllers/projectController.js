@@ -1,20 +1,75 @@
+// backend/src/controllers/projectController.js
+
 const supabase = require('../config/supabase');
 
 // GET /api/projects
 const getAll = async (req, res) => {
   try {
     const { group_id } = req.query;
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
+    // Si es admin, ver todos los proyectos
+    if (userRole === 'admin') {
+      let query = supabase
+        .from('projects')
+        .select(`*, groups (id, name)`)
+        .order('created_at', { ascending: false });
+
+      if (group_id) query = query.eq('group_id', group_id);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return res.json(data);
+    }
+
+    // Para manager y user: obtener proyectos con acceso
+    // 1. Proyectos donde es miembro directo
+    const { data: directProjects } = await supabase
+      .from('project_members')
+      .select('project_id')
+      .eq('user_id', userId);
+
+    const directProjectIds = directProjects?.map(p => p.project_id) || [];
+
+    // 2. Grupos donde pertenece el usuario
+    const { data: userGroups } = await supabase
+      .from('user_groups')
+      .select('group_id')
+      .eq('user_id', userId);
+
+    const userGroupIds = userGroups?.map(g => g.group_id) || [];
+
+    // Construir query de proyectos
     let query = supabase
       .from('projects')
       .select(`*, groups (id, name)`)
       .order('created_at', { ascending: false });
 
-    if (group_id) query = query.eq('group_id', group_id);
+    // Filtrar por proyectos accesibles
+    if (directProjectIds.length > 0 && userGroupIds.length > 0) {
+      // Tiene ambos: proyectos donde es miembro directo O proyectos de sus grupos
+      query = query.or(`id.in.(${directProjectIds.join(',')}),group_id.in.(${userGroupIds.join(',')})`);
+    } else if (directProjectIds.length > 0) {
+      // Solo es miembro directo de proyectos
+      query = query.in('id', directProjectIds);
+    } else if (userGroupIds.length > 0) {
+      // Solo pertenece a grupos
+      query = query.in('group_id', userGroupIds);
+    } else {
+      // No tiene acceso a ningún proyecto
+      return res.json([]);
+    }
+
+    // Aplicar filtro adicional por group_id si viene en query
+    if (group_id) {
+      query = query.eq('group_id', group_id);
+    }
 
     const { data, error } = await query;
     if (error) throw error;
-    res.json(data);
+
+    res.json(data || []);
   } catch (error) {
     console.error('ERROR GET ALL PROYECTOS:', error);
     res.status(500).json({ error: error.message });
@@ -25,15 +80,53 @@ const getAll = async (req, res) => {
 const getOne = async (req, res) => {
   try {
     const { id } = req.params;
-    const { data, error } = await supabase
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    // Primero obtener el proyecto
+    const { data: project, error } = await supabase
       .from('projects')
       .select(`*, groups (id, name)`)
       .eq('id', id)
       .single();
 
     if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Proyecto no encontrado' });
-    res.json(data);
+    if (!project) return res.status(404).json({ error: 'Proyecto no encontrado' });
+
+    // Si es admin, dar acceso directo
+    if (userRole === 'admin') {
+      return res.json(project);
+    }
+
+    // Verificar si es miembro directo del proyecto
+    const { data: memberCheck, error: memberError } = await supabase
+      .from('project_members')
+      .select('user_id')
+      .eq('project_id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (memberCheck) {
+      return res.json(project);
+    }
+
+    // Verificar si pertenece al grupo del proyecto
+    if (project.group_id) {
+      const { data: groupCheck, error: groupError } = await supabase
+        .from('user_groups')
+        .select('user_id')
+        .eq('group_id', project.group_id)
+        .eq('user_id', userId)
+        .single();
+
+      if (groupCheck) {
+        return res.json(project);
+      }
+    }
+
+    // No tiene acceso
+    return res.status(403).json({ error: 'No tienes acceso a este proyecto' });
+    
   } catch (error) {
     console.error('ERROR GET ONE PROYECTO:', error);
     res.status(500).json({ error: error.message });
@@ -239,4 +332,3 @@ module.exports = {
   getTasks, createTask, updateTask, deleteTask,
   getComments, createComment, deleteComment
 };
-

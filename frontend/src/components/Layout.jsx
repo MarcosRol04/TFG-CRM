@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon,
   ListItemText, Typography, Divider, Avatar, Collapse, Tooltip,
-  CircularProgress // ← IMPORTANTE: añade esto
+  CircularProgress
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon, People, Group,
@@ -23,7 +23,8 @@ export default function Layout({ children }) {
   const location = useLocation();
   const [groupsOpen, setGroupsOpen] = useState(true);
   const [groups, setGroups] = useState([]);
-  const [loadingGroups, setLoadingGroups] = useState(false); // ← nuevo estado
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [groupsError, setGroupsError] = useState(null);
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -32,11 +33,13 @@ export default function Layout({ children }) {
       // ⚠️ Si no hay token, no hacer la petición
       if (!token) {
         console.log('⏳ No hay token disponible, omitiendo carga de grupos');
-        setGroups([]); // Limpiar grupos
+        setGroups([]);
+        setGroupsError(null);
         return;
       }
 
-      setLoadingGroups(true); // Empezar carga
+      setLoadingGroups(true);
+      setGroupsError(null);
 
       try {
         console.log('📡 Cargando grupos...');
@@ -44,7 +47,13 @@ export default function Layout({ children }) {
           headers: { Authorization: `Bearer ${token}` } 
         });
         console.log('✅ Grupos cargados:', res.data);
+        // El backend ya filtra los grupos según acceso del usuario
         setGroups(res.data);
+        
+        // Si no hay grupos, mostrar mensaje informativo
+        if (res.data.length === 0) {
+          console.log('ℹ️ El usuario no pertenece a ningún grupo');
+        }
       } catch (error) {
         console.error('❌ Error al cargar grupos:', error);
         
@@ -59,21 +68,35 @@ export default function Layout({ children }) {
             navigate('/login');
           }
         }
+        // Si es error 403, el usuario no tiene acceso a ningún grupo
+        else if (error.response?.status === 403) {
+          setGroupsError('No tienes acceso a ningún grupo');
+        } else {
+          setGroupsError('Error al cargar grupos');
+        }
         
-        setGroups([]); // Limpiar grupos en caso de error
+        setGroups([]);
       } finally {
-        setLoadingGroups(false); // Terminar carga
+        setLoadingGroups(false);
       }
     };
 
     fetchGroups();
-  }, [location.pathname, navigate]); // Añadido navigate como dependencia
+  }, [location.pathname, navigate]);
 
   const navItems = [
     { label: 'Dashboard',    icon: <DashboardIcon />, path: '/dashboard' },
     { label: 'Usuarios',     icon: <People />,        path: '/users'     },
     { label: 'Proyectos',    icon: <FolderOpen />,    path: '/projects'  },
   ];
+
+  // Filtrar usuarios solo si el usuario actual tiene rol admin
+  const visibleNavItems = navItems.filter(item => {
+    if (item.path === '/users' && usuario?.role !== 'admin') {
+      return false;
+    }
+    return true;
+  });
 
   const isActive = (path) => location.pathname === path;
 
@@ -116,8 +139,8 @@ export default function Layout({ children }) {
 
         <List sx={{ px: 1, mt: 1, flexGrow: 1, overflowY: 'auto' }}>
 
-          {/* Dashboard, Usuarios, Proyectos */}
-          {navItems.map(({ label, icon, path }) => (
+          {/* Dashboard, Usuarios, Proyectos (filtrados por rol) */}
+          {visibleNavItems.map(({ label, icon, path }) => (
             <ListItem key={path} disablePadding sx={{ mb: 0.5 }}>
               <ListItemButton onClick={() => navigate(path)} sx={navBtnSx(path)}>
                 <ListItemIcon>{icon}</ListItemIcon>
@@ -147,17 +170,23 @@ export default function Layout({ children }) {
             </ListItemButton>
           </ListItem>
 
-          {/* Lista de grupos con estado de carga */}
+          {/* Lista de grupos con estado de carga y errores */}
           <Collapse in={groupsOpen} timeout="auto" unmountOnExit>
             <List disablePadding sx={{ pl: 2 }}>
               {loadingGroups ? (
                 <ListItem sx={{ py: 1, justifyContent: 'center' }}>
                   <CircularProgress size={20} />
                 </ListItem>
+              ) : groupsError ? (
+                <ListItem sx={{ py: 0.5 }}>
+                  <Typography variant="caption" color="error.main">
+                    {groupsError}
+                  </Typography>
+                </ListItem>
               ) : groups.length === 0 ? (
                 <ListItem sx={{ py: 0.5 }}>
                   <Typography variant="caption" color="text.secondary">
-                    {localStorage.getItem('token') ? 'No hay grupos' : 'Inicia sesión'}
+                    {localStorage.getItem('token') ? 'No perteneces a ningún grupo' : 'Inicia sesión'}
                   </Typography>
                 </ListItem>
               ) : groups.map(group => {
@@ -217,7 +246,9 @@ export default function Layout({ children }) {
               </Avatar>
               <Box sx={{ overflow: 'hidden' }}>
                 <Typography variant="body2" fontWeight={600} noWrap>{usuario?.name}</Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>{usuario?.role}</Typography>
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  {usuario?.role === 'admin' ? 'Administrador' : usuario?.role === 'manager' ? 'Manager' : 'Usuario'}
+                </Typography>
               </Box>
             </Box>
             <ListItemButton
